@@ -1,5 +1,5 @@
 const express = require('express')
-const mysql =  require('mysql2')
+const mysql = require('mysql2/promise')
 
 const app = express()
 const port = 3000
@@ -10,22 +10,22 @@ const config = {
   database: 'nodedb'
 };
 
-InsertIntoPeopleAName();
+(async () => {
+  const connection = await mysql.createConnection(config);
 
-app.get('/', (req, res) => {
-  let connection = mysql.createConnection(config);
-  connection.query('SELECT * FROM people', (error, results) => {
-    if (error) throw error;
+  await CreateTableIfNotExists(connection);
+  await InsertIntoPeopleAName(connection);
 
-    let names = "";
+  connection.end();
+})();
 
-    results.forEach(c => {
-      names += "<li>" + c.name + "</li>"
-    });
+app.get('/', async (req, res) => {
+  const connection = await mysql.createConnection(config);
+  const [rows] = await connection.execute('SELECT * FROM people');
 
-    res.status(200).send("<h1>Full Cycle Rocks!</h1> <ul>" + names + "</ul>")
-  });
-  
+  const names = rows.map(row => `<li>${row.name}</li>`).join('');
+  res.status(200).send(`<h1>Full Cycle Rocks!</h1> <ul>${names}</ul>`);
+
   connection.end();
 })
 
@@ -33,10 +33,12 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
 
-function InsertIntoPeopleAName() {
-  let connection = mysql.createConnection(config);
-  let sql = `INSERT INTO people(name) values('Natan Barros')`;
+async function InsertIntoPeopleAName(connection) {
+  const sql = `INSERT INTO people(name) values('Natan Barros')`;
+  await connection.execute(sql);
+}
 
-  connection.query(sql);
-  connection.end();
+async function CreateTableIfNotExists(connection) {
+  const createTableSql = 'CREATE TABLE IF NOT EXISTS people (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL);';
+  await connection.execute(createTableSql);
 }
