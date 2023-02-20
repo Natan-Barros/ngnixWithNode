@@ -10,22 +10,17 @@ const config = {
   database: 'nodedb'
 };
 
-(async () => {
-  const connection = await mysql.createConnection(config);
-
-  await CreateTableIfNotExists(connection);
-  await InsertIntoPeopleAName(connection);
-
-  connection.end();
-})();
+const pool = mysql.createPool(config);
 
 app.get('/', async (req, res) => {
-  const connection = await mysql.createConnection(config);
+  const connection = await pool.getConnection();
+  await CreateTableIfNotExists(connection);
+  await InsertIntoPeopleAName(connection);
+  
   const [rows] = await connection.execute('SELECT * FROM people');
-
   const names = rows.map(row => `<li>${row.name}</li>`).join('');
-  res.status(200).send(`<h1>Full Cycle Rocks!</h1> <ul>${names}</ul>`);
 
+  res.status(200).send(`<h1>Full Cycle Rocks!</h1> <ul>${names}</ul>`);
   connection.end();
 })
 
@@ -34,11 +29,17 @@ app.listen(port, () => {
 })
 
 async function InsertIntoPeopleAName(connection) {
-  const sql = `INSERT INTO people(name) values('Natan Barros')`;
-  await connection.execute(sql);
+  const name = `Natan Barros`;
+  await pool.query('INSERT INTO people (name) VALUES (?)', [name]);
 }
 
 async function CreateTableIfNotExists(connection) {
-  const createTableSql = 'CREATE TABLE IF NOT EXISTS people (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL);';
-  await connection.execute(createTableSql);
+  const [rows, fields] = await connection.query(`
+    CREATE TABLE IF NOT EXISTS people (
+      id INT(11) NOT NULL AUTO_INCREMENT,
+      name VARCHAR(255) NOT NULL,
+      PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `);
+  connection.release();
 }
