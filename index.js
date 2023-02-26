@@ -29,7 +29,7 @@ app.listen(port, () => {
 
 async function InsertIntoPeopleAName(connection) {
   const name = `Natan Barros`;
-  await pool.query('INSERT INTO people (name) VALUES (?)', [name]);
+  await connection.query('INSERT INTO people (name) VALUES (?)', [name]);
  
 }
 
