@@ -15,8 +15,7 @@ const pool = mysql.createPool(config);
 app.get('/', async (req, res) => {
   const connection = await pool.getConnection();
   await CreateTableIfNotExists(connection);
-  await InsertIntoPeopleAName(connection);
-  
+
   const [rows] = await connection.execute('SELECT * FROM people');
   const names = rows.map(row => `<li>${row.name}</li>`).join('');
 
@@ -31,6 +30,7 @@ app.listen(port, () => {
 async function InsertIntoPeopleAName(connection) {
   const name = `Natan Barros`;
   await pool.query('INSERT INTO people (name) VALUES (?)', [name]);
+ 
 }
 
 async function CreateTableIfNotExists(connection) {
@@ -41,5 +41,7 @@ async function CreateTableIfNotExists(connection) {
       PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
   `);
+
+  await InsertIntoPeopleAName(connection);
   connection.release();
 }
